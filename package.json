@@ -1,0 +1,32 @@
+{
+  "name": "g2-flashcards",
+  "version": "1.0.0",
+  "description": "Flashcard app for Even Realities G2 glasses with FSRS scheduling",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 5173",
+    "build": "vite build",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomtau/g2-flashcards.git"
+  },
+  "keywords": ["flashcards", "even-realities", "g2", "fsrs"],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tomtau/g2-flashcards/issues"
+  },
+  "homepage": "https://github.com/tomtau/g2-flashcards#readme",
+  "dependencies": {
+    "@evenrealities/even_hub_sdk": "^0.0.7",
+    "ts-fsrs": "^4.6.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^6.3.5",
+    "vitest": "^3.2.3"
+  }
+}

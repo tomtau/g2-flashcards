@@ -1,0 +1,15 @@
+{
+  "package_id": "com.flashcards.g2",
+  "edition": "202601",
+  "name": "G2 Flashcards",
+  "version": "1.0.0",
+  "min_app_version": "0.1.0",
+  "tagline": "Spaced repetition flashcards for G2 glasses",
+  "description": "A flashcard application with FSRS scheduling, Anki import, and G2 glasses review mode",
+  "author": "",
+  "entrypoint": "index.html",
+  "permissions": {
+    "network": [],
+    "fs": []
+  }
+}

@@ -169,17 +169,23 @@ export async function startG2Review(
       const sysClick = event.sysEvent && isClick(event.sysEvent.eventType);
       if (textClick || sysClick) {
         processing = true;
-        await showBack();
-        processing = false;
+        try {
+          await showBack();
+        } finally {
+          processing = false;
+        }
       }
     } else {
       if (event.listEvent && isClick(event.listEvent.eventType)) {
         processing = true;
-        const idx = event.listEvent.currentSelectItemIndex ?? 0;
-        if (idx >= 0 && idx < RATING_VALUES.length) {
-          await handleRating(RATING_VALUES[idx]);
+        try {
+          const idx = event.listEvent.currentSelectItemIndex ?? 0;
+          if (idx >= 0 && idx < RATING_VALUES.length) {
+            await handleRating(RATING_VALUES[idx]);
+          }
+        } finally {
+          processing = false;
         }
-        processing = false;
       }
     }
   });

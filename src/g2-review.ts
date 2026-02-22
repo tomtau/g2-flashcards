@@ -105,6 +105,7 @@ export async function startG2Review(
     const header = `[${cardIndex + 1}/${cards.length}]\n\n`;
     await bridge.rebuildPageContainer(buildTextPage(header + card.front));
     showingFront = true;
+    lastTransitionTime = Date.now();
   };
 
   const showBack = async () => {
@@ -163,6 +164,7 @@ export async function startG2Review(
     }
 
     if (showingFront) {
+      if (Date.now() - lastTransitionTime < 300) return;
       if (event.textEvent && isClick(event.textEvent.eventType)) {
         await showBack();
       }

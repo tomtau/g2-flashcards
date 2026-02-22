@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { reviewCard, getNextReviewLabel, Rating } from '../scheduler';
+import { reviewCard, getNextReviewLabel, formatDueDate, Rating } from '../scheduler';
 import { createFlashCard } from '../storage';
 
 describe('scheduler', () => {
@@ -43,5 +43,21 @@ describe('scheduler', () => {
     const card = createFlashCard('Q', 'A');
     card.fsrs.due = new Date(Date.now() + 15 * 60 * 1000);
     expect(getNextReviewLabel(card)).toBe('15m');
+  });
+
+  it('formatDueDate returns formatted date string', () => {
+    const card = createFlashCard('Q', 'A');
+    card.fsrs.due = new Date('2026-03-15T14:30:00');
+    const label = formatDueDate(card);
+    expect(label).toContain('Mar');
+    expect(label).toContain('15');
+  });
+
+  it('formatDueDate includes year for different year', () => {
+    const card = createFlashCard('Q', 'A');
+    card.fsrs.due = new Date('2099-06-01T09:00:00');
+    const label = formatDueDate(card);
+    expect(label).toContain('2099');
+    expect(label).toContain('Jun');
   });
 });

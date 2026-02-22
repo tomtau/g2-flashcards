@@ -27,3 +27,14 @@ export function getNextReviewLabel(card: FlashCard): string {
   const diffD = Math.floor(diffH / 24);
   return `${diffD}d`;
 }
+
+export function formatDueDate(card: FlashCard): string {
+  const due = new Date(card.fsrs.due);
+  const now = new Date();
+  const sameYear = due.getFullYear() === now.getFullYear();
+  const month = due.toLocaleString('en-US', { month: 'short' });
+  const day = due.getDate();
+  const time = due.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+  if (sameYear) return `${month} ${day}, ${time}`;
+  return `${month} ${day}, ${due.getFullYear()}, ${time}`;
+}

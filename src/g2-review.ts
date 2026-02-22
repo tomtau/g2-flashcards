@@ -50,7 +50,7 @@ function buildRatingPage(backContent: string): RebuildPageContainer {
         xPosition: 0,
         yPosition: 0,
         width: 576,
-        height: 168,
+        height: 140,
         borderWidth: 0,
         borderColor: 5,
         paddingLength: 4,
@@ -63,9 +63,9 @@ function buildRatingPage(backContent: string): RebuildPageContainer {
     listObject: [
       new ListContainerProperty({
         xPosition: 0,
-        yPosition: 172,
+        yPosition: 144,
         width: 576,
-        height: 116,
+        height: 144,
         borderWidth: 1,
         borderColor: 13,
         borderRdaius: 6,
@@ -150,7 +150,9 @@ export async function startG2Review(
       et === OsEventTypeList.CLICK_EVENT || et === undefined;
 
     if (cardIndex >= cards.length) {
-      if (event.textEvent && isClick(event.textEvent.eventType)) {
+      const textClick = event.textEvent && isClick(event.textEvent.eventType);
+      const sysClick = event.sysEvent && isClick(event.sysEvent.eventType);
+      if (textClick || sysClick) {
         await bridge.shutDownPageContainer(0);
         onComplete(updatedCards);
       }

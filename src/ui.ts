@@ -13,6 +13,9 @@ import { reviewCard, Rating, getNextReviewLabel, formatDueDate, type Grade } fro
 import { parseAnkiTxt, type AnkiParseResult } from './anki-import';
 import { startG2Review } from './g2-review';
 
+const DEFAULT_REVIEW_COUNT = 20;
+const DEFAULT_NEW_CARD_LIMIT = 10;
+
 let decks: Deck[] = loadDecks();
 const app = document.getElementById('app')!;
 
@@ -139,8 +142,8 @@ function renderDeckView(deckId: string) {
   const dueCounts = getDueCardCounts(deck);
   const totalDue = dueCounts.newDue + dueCounts.learningDue + dueCounts.reviewDue;
   const savedPrefs = loadReviewPrefs(deckId);
-  const defaultReviewCount = savedPrefs?.reviewCount ?? Math.min(totalDue, 20);
-  const defaultNewLimit = savedPrefs?.newCardLimit ?? Math.min(dueCounts.newDue, 10);
+  const defaultReviewCount = savedPrefs?.reviewCount ?? Math.min(totalDue, DEFAULT_REVIEW_COUNT);
+  const defaultNewLimit = savedPrefs?.newCardLimit ?? Math.min(dueCounts.newDue, DEFAULT_NEW_CARD_LIMIT);
 
   app.innerHTML = `
     <div class="breadcrumb"><a id="back-to-decks">Decks</a> / ${escapeHtml(deck.name)}</div>

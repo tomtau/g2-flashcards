@@ -60,8 +60,8 @@ export function createFlashCard(front: string, back: string): FlashCard {
 
 export function getCardCounts(deck: Deck): CardCounts {
   let newCount = 0;
-  let learning = 0;
-  let review = 0;
+  let learningCount = 0;
+  let reviewCount = 0;
   for (const card of deck.cards) {
     switch (card.fsrs.state) {
       case State.New:
@@ -69,14 +69,14 @@ export function getCardCounts(deck: Deck): CardCounts {
         break;
       case State.Learning:
       case State.Relearning:
-        learning++;
+        learningCount++;
         break;
       case State.Review:
-        review++;
+        reviewCount++;
         break;
     }
   }
-  return { new: newCount, learning, review };
+  return { new: newCount, learning: learningCount, review: reviewCount };
 }
 
 export function getDueCardCounts(deck: Deck): DueCardCounts {

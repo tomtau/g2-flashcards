@@ -50,7 +50,7 @@ function buildRatingPage(backContent: string): RebuildPageContainer {
         xPosition: 0,
         yPosition: 0,
         width: 576,
-        height: 140,
+        height: 108,
         borderWidth: 0,
         borderColor: 5,
         paddingLength: 4,
@@ -63,13 +63,13 @@ function buildRatingPage(backContent: string): RebuildPageContainer {
     listObject: [
       new ListContainerProperty({
         xPosition: 0,
-        yPosition: 144,
+        yPosition: 108,
         width: 576,
-        height: 144,
+        height: 180,
         borderWidth: 1,
         borderColor: 13,
-        borderRdaius: 6,
-        paddingLength: 4,
+        borderRdaius: 4,
+        paddingLength: 0,
         containerID: 2,
         containerName: 'rating',
         isEventCapture: 1,
@@ -98,6 +98,7 @@ export async function startG2Review(
   const updatedCards: FlashCard[] = [];
   let cardIndex = 0;
   let showingFront = true;
+  let lastTransitionTime = 0;
 
   const showFront = async () => {
     const card = cards[cardIndex];
@@ -110,6 +111,7 @@ export async function startG2Review(
     const card = cards[cardIndex];
     await bridge.rebuildPageContainer(buildRatingPage(card.back));
     showingFront = false;
+    lastTransitionTime = Date.now();
   };
 
   const handleRating = async (grade: Grade) => {
@@ -168,6 +170,7 @@ export async function startG2Review(
       }
     } else {
       if (event.listEvent && isClick(event.listEvent.eventType)) {
+        if (Date.now() - lastTransitionTime < 300) return;
         const idx = event.listEvent.currentSelectItemIndex ?? 0;
         if (idx >= 0 && idx < RATING_VALUES.length) {
           await handleRating(RATING_VALUES[idx]);

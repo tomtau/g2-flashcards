@@ -16,7 +16,6 @@ export type ReviewCompleteCallback = (updatedCards: FlashCard[]) => void;
 
 const RATING_LABELS = ['Again', 'Hard', 'Good', 'Easy'];
 const RATING_VALUES: Grade[] = [Rating.Again, Rating.Hard, Rating.Good, Rating.Easy];
-const TRANSITION_COOLDOWN_MS = 300;
 
 function truncate(text: string, maxLen: number): string {
   return text.length > maxLen ? text.slice(0, maxLen - 3) + '...' : text;
@@ -99,21 +98,19 @@ export async function startG2Review(
   const updatedCards: FlashCard[] = [];
   let cardIndex = 0;
   let showingFront = true;
-  let lastTransitionTime = 0;
+  let processing = false;
 
   const showFront = async () => {
     const card = cards[cardIndex];
     const header = `[${cardIndex + 1}/${cards.length}]\n\n`;
     await bridge.rebuildPageContainer(buildTextPage(header + card.front));
     showingFront = true;
-    lastTransitionTime = Date.now();
   };
 
   const showBack = async () => {
     const card = cards[cardIndex];
     await bridge.rebuildPageContainer(buildRatingPage(card.back));
     showingFront = false;
-    lastTransitionTime = Date.now();
   };
 
   const handleRating = async (grade: Grade) => {
@@ -150,6 +147,8 @@ export async function startG2Review(
   showingFront = true;
 
   const unsubscribe = bridge.onEvenHubEvent(async (event: EvenHubEvent) => {
+    if (processing) return;
+
     const isClick = (et: number | undefined) =>
       et === OsEventTypeList.CLICK_EVENT || et === undefined;
 
@@ -157,6 +156,7 @@ export async function startG2Review(
       const textClick = event.textEvent && isClick(event.textEvent.eventType);
       const sysClick = event.sysEvent && isClick(event.sysEvent.eventType);
       if (textClick || sysClick) {
+        processing = true;
         unsubscribe();
         await bridge.shutDownPageContainer(0);
         onComplete(updatedCards);
@@ -165,20 +165,21 @@ export async function startG2Review(
     }
 
     if (showingFront) {
-      if (Date.now() - lastTransitionTime < TRANSITION_COOLDOWN_MS) return;
-      if (event.textEvent && isClick(event.textEvent.eventType)) {
+      const textClick = event.textEvent && isClick(event.textEvent.eventType);
+      const sysClick = event.sysEvent && isClick(event.sysEvent.eventType);
+      if (textClick || sysClick) {
+        processing = true;
         await showBack();
-      }
-      if (event.sysEvent && isClick(event.sysEvent.eventType)) {
-        await showBack();
+        processing = false;
       }
     } else {
       if (event.listEvent && isClick(event.listEvent.eventType)) {
-        if (Date.now() - lastTransitionTime < TRANSITION_COOLDOWN_MS) return;
+        processing = true;
         const idx = event.listEvent.currentSelectItemIndex ?? 0;
         if (idx >= 0 && idx < RATING_VALUES.length) {
           await handleRating(RATING_VALUES[idx]);
         }
+        processing = false;
       }
     }
   });

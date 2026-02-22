@@ -1,5 +1,14 @@
 import type { Deck, FlashCard } from './models';
-import { loadDecks, saveDecks, createDeck, createFlashCard, getDueCards } from './storage';
+import {
+  loadDecks,
+  saveDecks,
+  createDeck,
+  createFlashCard,
+  getDueCards,
+  getDueCardCounts,
+  loadReviewPrefs,
+  saveReviewPrefs,
+} from './storage';
 import { reviewCard, Rating, getNextReviewLabel, formatDueDate, type Grade } from './scheduler';
 import { parseAnkiTxt, type AnkiParseResult } from './anki-import';
 import { startG2Review } from './g2-review';
@@ -76,7 +85,8 @@ function renderDeckItems() {
 
   container.innerHTML = decks
     .map((deck) => {
-      const dueCount = getDueCards(deck, Infinity).length;
+      const counts = getDueCardCounts(deck);
+      const totalDue = counts.newDue + counts.learningDue + counts.reviewDue;
       return `
       <div class="card" data-id="${escapeHtml(deck.id)}">
         <div class="card-header">
@@ -87,7 +97,12 @@ function renderDeckItems() {
           </div>
         </div>
         <div class="card-meta">
-          ${deck.cards.length} card(s) · ${dueCount} due
+          ${deck.cards.length} card(s) · ${totalDue} due
+        </div>
+        <div class="card-meta deck-counts">
+          <span class="count-new">${counts.newDue} new</span> ·
+          <span class="count-learning">${counts.learningDue} learning</span> ·
+          <span class="count-review">${counts.reviewDue} review</span>
         </div>
       </div>`;
     })
@@ -121,18 +136,27 @@ function renderDeckView(deckId: string) {
     return;
   }
 
-  const dueCards = getDueCards(deck, Infinity);
+  const dueCounts = getDueCardCounts(deck);
+  const totalDue = dueCounts.newDue + dueCounts.learningDue + dueCounts.reviewDue;
+  const savedPrefs = loadReviewPrefs(deckId);
+  const defaultReviewCount = savedPrefs?.reviewCount ?? Math.min(totalDue, 20);
+  const defaultNewLimit = savedPrefs?.newCardLimit ?? Math.min(dueCounts.newDue, 10);
 
   app.innerHTML = `
     <div class="breadcrumb"><a id="back-to-decks">Decks</a> / ${escapeHtml(deck.name)}</div>
     <h2>${escapeHtml(deck.name)}</h2>
     <div class="card-meta" style="margin-bottom:12px">
-      ${deck.cards.length} card(s) · ${dueCards.length} due
+      ${deck.cards.length} card(s) · ${totalDue} due
+      <span class="deck-counts">
+        (<span class="count-new">${dueCounts.newDue} new</span> ·
+        <span class="count-learning">${dueCounts.learningDue} learning</span> ·
+        <span class="count-review">${dueCounts.reviewDue} review</span>)
+      </span>
     </div>
     <div class="btn-row">
       <button class="primary" id="add-card-btn">+ Add Card</button>
-      <button id="review-btn" ${dueCards.length === 0 ? 'disabled' : ''}>
-        Review on G2 (${dueCards.length} due)
+      <button id="review-btn" ${totalDue === 0 ? 'disabled' : ''}>
+        Review on G2 (${totalDue} due)
       </button>
       <button id="rename-deck-btn">Rename</button>
     </div>
@@ -154,7 +178,12 @@ function renderDeckView(deckId: string) {
     <div id="review-setup" class="hidden review-setup">
       <div class="form-group">
         <label>Cards to review</label>
-        <input type="number" id="review-count" min="1" max="${dueCards.length}" value="${Math.min(dueCards.length, 20)}" />
+        <input type="number" id="review-count" min="1" max="${totalDue}" value="${Math.min(totalDue, defaultReviewCount)}" />
+      </div>
+      <div class="form-group">
+        <label>New card limit</label>
+        <input type="number" id="new-card-limit" min="0" max="${dueCounts.newDue}" value="${Math.min(dueCounts.newDue, defaultNewLimit)}" />
+        <span class="form-hint">${dueCounts.newDue} new card(s) available</span>
       </div>
       <div class="btn-row">
         <button class="primary" id="start-review-btn">Start Review</button>
@@ -223,7 +252,9 @@ function renderDeckView(deckId: string) {
 
   document.getElementById('start-review-btn')!.onclick = async () => {
     const count = parseInt((document.getElementById('review-count') as HTMLInputElement).value);
-    const reviewCards = getDueCards(deck, count);
+    const newLimit = parseInt((document.getElementById('new-card-limit') as HTMLInputElement).value);
+    saveReviewPrefs(deckId, { reviewCount: count, newCardLimit: newLimit });
+    const reviewCards = getDueCards(deck, count, newLimit);
     if (reviewCards.length === 0) return;
 
     app.innerHTML = '<div class="empty">Review in progress on G2 glasses...</div>';

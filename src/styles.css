@@ -292,3 +292,26 @@ textarea {
   background: #263238;
   color: #78909c;
 }
+
+.deck-counts {
+  font-size: 0.7rem;
+}
+
+.count-new {
+  color: #66bb6a;
+}
+
+.count-learning {
+  color: #ffa726;
+}
+
+.count-review {
+  color: #42a5f5;
+}
+
+.form-hint {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--text2);
+  margin-top: 4px;
+}

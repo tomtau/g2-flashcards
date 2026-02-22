@@ -50,7 +50,7 @@ function buildRatingPage(backContent: string): RebuildPageContainer {
         xPosition: 0,
         yPosition: 0,
         width: 576,
-        height: 168,
+        height: 108,
         borderWidth: 0,
         borderColor: 5,
         paddingLength: 4,
@@ -63,13 +63,13 @@ function buildRatingPage(backContent: string): RebuildPageContainer {
     listObject: [
       new ListContainerProperty({
         xPosition: 0,
-        yPosition: 172,
+        yPosition: 108,
         width: 576,
-        height: 116,
+        height: 180,
         borderWidth: 1,
         borderColor: 13,
-        borderRdaius: 6,
-        paddingLength: 4,
+        borderRdaius: 4,
+        paddingLength: 0,
         containerID: 2,
         containerName: 'rating',
         isEventCapture: 1,
@@ -98,6 +98,7 @@ export async function startG2Review(
   const updatedCards: FlashCard[] = [];
   let cardIndex = 0;
   let showingFront = true;
+  let processing = false;
 
   const showFront = async () => {
     const card = cards[cardIndex];
@@ -145,12 +146,18 @@ export async function startG2Review(
   await bridge.createStartUpPageContainer(startPage);
   showingFront = true;
 
-  bridge.onEvenHubEvent(async (event: EvenHubEvent) => {
+  const unsubscribe = bridge.onEvenHubEvent(async (event: EvenHubEvent) => {
+    if (processing) return;
+
     const isClick = (et: number | undefined) =>
       et === OsEventTypeList.CLICK_EVENT || et === undefined;
 
     if (cardIndex >= cards.length) {
-      if (event.textEvent && isClick(event.textEvent.eventType)) {
+      const textClick = event.textEvent && isClick(event.textEvent.eventType);
+      const sysClick = event.sysEvent && isClick(event.sysEvent.eventType);
+      if (textClick || sysClick) {
+        processing = true;
+        unsubscribe();
         await bridge.shutDownPageContainer(0);
         onComplete(updatedCards);
       }
@@ -158,17 +165,26 @@ export async function startG2Review(
     }
 
     if (showingFront) {
-      if (event.textEvent && isClick(event.textEvent.eventType)) {
-        await showBack();
-      }
-      if (event.sysEvent && isClick(event.sysEvent.eventType)) {
-        await showBack();
+      const textClick = event.textEvent && isClick(event.textEvent.eventType);
+      const sysClick = event.sysEvent && isClick(event.sysEvent.eventType);
+      if (textClick || sysClick) {
+        processing = true;
+        try {
+          await showBack();
+        } finally {
+          processing = false;
+        }
       }
     } else {
       if (event.listEvent && isClick(event.listEvent.eventType)) {
-        const idx = event.listEvent.currentSelectItemIndex ?? 0;
-        if (idx >= 0 && idx < RATING_VALUES.length) {
-          await handleRating(RATING_VALUES[idx]);
+        processing = true;
+        try {
+          const idx = event.listEvent.currentSelectItemIndex ?? 0;
+          if (idx >= 0 && idx < RATING_VALUES.length) {
+            await handleRating(RATING_VALUES[idx]);
+          }
+        } finally {
+          processing = false;
         }
       }
     }

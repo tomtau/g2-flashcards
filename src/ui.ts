@@ -1,6 +1,6 @@
 import type { Deck, FlashCard } from './models';
 import { loadDecks, saveDecks, createDeck, createFlashCard, getDueCards } from './storage';
-import { reviewCard, Rating, getNextReviewLabel, type Grade } from './scheduler';
+import { reviewCard, Rating, getNextReviewLabel, formatDueDate, type Grade } from './scheduler';
 import { parseAnkiTxt, type AnkiParseResult } from './anki-import';
 import { startG2Review } from './g2-review';
 
@@ -259,6 +259,7 @@ function renderCardItems(deck: Deck) {
     .map((card) => {
       const nextReview = getNextReviewLabel(card);
       const isDue = nextReview === 'Now';
+      const dueDate = formatDueDate(card);
       return `
       <div class="card">
         <div class="card-header">
@@ -270,6 +271,7 @@ function renderCardItems(deck: Deck) {
           </div>
         </div>
         <div class="card-meta">${escapeHtml(card.back.slice(0, 100))}</div>
+        <div class="card-meta">Due: ${escapeHtml(dueDate)}</div>
       </div>`;
     })
     .join('');

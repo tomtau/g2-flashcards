@@ -16,6 +16,7 @@ export type ReviewCompleteCallback = (updatedCards: FlashCard[]) => void;
 
 const RATING_LABELS = ['Again', 'Hard', 'Good', 'Easy'];
 const RATING_VALUES: Grade[] = [Rating.Again, Rating.Hard, Rating.Good, Rating.Easy];
+const TRANSITION_COOLDOWN_MS = 300;
 
 function truncate(text: string, maxLen: number): string {
   return text.length > maxLen ? text.slice(0, maxLen - 3) + '...' : text;
@@ -164,7 +165,7 @@ export async function startG2Review(
     }
 
     if (showingFront) {
-      if (Date.now() - lastTransitionTime < 300) return;
+      if (Date.now() - lastTransitionTime < TRANSITION_COOLDOWN_MS) return;
       if (event.textEvent && isClick(event.textEvent.eventType)) {
         await showBack();
       }
@@ -173,7 +174,7 @@ export async function startG2Review(
       }
     } else {
       if (event.listEvent && isClick(event.listEvent.eventType)) {
-        if (Date.now() - lastTransitionTime < 300) return;
+        if (Date.now() - lastTransitionTime < TRANSITION_COOLDOWN_MS) return;
         const idx = event.listEvent.currentSelectItemIndex ?? 0;
         if (idx >= 0 && idx < RATING_VALUES.length) {
           await handleRating(RATING_VALUES[idx]);

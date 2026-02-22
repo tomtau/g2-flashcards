@@ -147,7 +147,7 @@ export async function startG2Review(
   await bridge.createStartUpPageContainer(startPage);
   showingFront = true;
 
-  bridge.onEvenHubEvent(async (event: EvenHubEvent) => {
+  const unsubscribe = bridge.onEvenHubEvent(async (event: EvenHubEvent) => {
     const isClick = (et: number | undefined) =>
       et === OsEventTypeList.CLICK_EVENT || et === undefined;
 
@@ -155,6 +155,7 @@ export async function startG2Review(
       const textClick = event.textEvent && isClick(event.textEvent.eventType);
       const sysClick = event.sysEvent && isClick(event.sysEvent.eventType);
       if (textClick || sysClick) {
+        unsubscribe();
         await bridge.shutDownPageContainer(0);
         onComplete(updatedCards);
       }

@@ -1,5 +1,7 @@
 # Even Realities G2 – development notes
 
+Source: https://github.com/nickustinov/even-g2-notes/blob/main/G2.md
+
 > **Disclaimer:** This document is the result of independent research and reverse-engineering of the public SDK. It is not official documentation, may contain inaccuracies, and is updated as new information becomes available. The author is not affiliated with Even Realities.
 
 - [Overview](#overview)

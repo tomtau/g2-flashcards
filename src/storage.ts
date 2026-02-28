@@ -161,3 +161,87 @@ export function saveReviewPrefs(deckId: string, prefs: ReviewPrefs): void {
   all[deckId] = prefs;
   localStorage.setItem(REVIEW_PREFS_KEY, JSON.stringify(all));
 }
+
+// ─── Backup / Restore ───────────────────────────────────────
+
+export interface AppState {
+  version: 1;
+  exportedAt: string;
+  decks: Deck[];
+  reviewPrefs: Record<string, ReviewPrefs>;
+}
+
+export function exportAppState(): string {
+  const decks = loadDecks();
+  let reviewPrefs: Record<string, ReviewPrefs> = {};
+  const raw = localStorage.getItem(REVIEW_PREFS_KEY);
+  if (raw) {
+    try {
+      reviewPrefs = JSON.parse(raw);
+    } catch {
+      // ignore corrupt data
+    }
+  }
+  const state: AppState = {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    decks,
+    reviewPrefs,
+  };
+  return JSON.stringify(state, null, 2);
+}
+
+export function importAppState(json: string): { success: boolean; error?: string; deckCount?: number } {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json);
+  } catch {
+    return { success: false, error: 'Invalid JSON file.' };
+  }
+
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return { success: false, error: 'Invalid backup format.' };
+  }
+
+  const data = parsed as Record<string, unknown>;
+
+  if (data.version !== 1) {
+    return { success: false, error: 'Unsupported backup version.' };
+  }
+
+  if (!Array.isArray(data.decks)) {
+    return { success: false, error: 'Backup file is missing deck data.' };
+  }
+
+  // Validate deck structure
+  for (const deck of data.decks) {
+    if (typeof deck !== 'object' || deck === null) {
+      return { success: false, error: 'Invalid deck entry in backup.' };
+    }
+    const d = deck as Record<string, unknown>;
+    if (typeof d.id !== 'string' || typeof d.name !== 'string' || !Array.isArray(d.cards)) {
+      return { success: false, error: 'Invalid deck structure in backup.' };
+    }
+  }
+
+  // Restore decks
+  const decks = data.decks as Deck[];
+  for (const deck of decks) {
+    for (const card of deck.cards) {
+      const due = new Date(card.fsrs.due);
+      card.fsrs.due = isNaN(due.getTime()) ? new Date() : due;
+      if (card.fsrs.last_review) {
+        const lr = new Date(card.fsrs.last_review);
+        card.fsrs.last_review = isNaN(lr.getTime()) ? undefined : lr;
+      }
+    }
+  }
+  saveDecks(decks);
+
+  // Restore review prefs
+  if (data.reviewPrefs && typeof data.reviewPrefs === 'object' && !Array.isArray(data.reviewPrefs)) {
+    localStorage.setItem(REVIEW_PREFS_KEY, JSON.stringify(data.reviewPrefs));
+  }
+
+  return { success: true, deckCount: decks.length };
+}

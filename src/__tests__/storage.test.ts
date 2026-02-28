@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import {
   loadDecks, saveDecks, createDeck, createFlashCard, getDueCards,
   getCardCounts, getDueCardCounts, loadReviewPrefs, saveReviewPrefs,
+  exportAppState, importAppState,
 } from '../storage';
 import type { Deck } from '../models';
 import { State } from 'ts-fsrs';
@@ -189,5 +190,90 @@ describe('storage', () => {
     saveReviewPrefs('deck2', { reviewCount: 20, newCardLimit: 8 });
     expect(loadReviewPrefs('deck1')).toEqual({ reviewCount: 10, newCardLimit: 3 });
     expect(loadReviewPrefs('deck2')).toEqual({ reviewCount: 20, newCardLimit: 8 });
+  });
+
+  // ─── Backup / Restore ───────────────────────────────────────
+
+  it('exportAppState includes decks and review prefs', () => {
+    const deck = createDeck('Export Test');
+    deck.cards.push(createFlashCard('Q1', 'A1'));
+    saveDecks([deck]);
+    saveReviewPrefs(deck.id, { reviewCount: 15, newCardLimit: 5 });
+
+    const json = exportAppState();
+    const parsed = JSON.parse(json);
+    expect(parsed.version).toBe(1);
+    expect(parsed.exportedAt).toBeDefined();
+    expect(parsed.decks).toHaveLength(1);
+    expect(parsed.decks[0].name).toBe('Export Test');
+    expect(parsed.reviewPrefs[deck.id]).toEqual({ reviewCount: 15, newCardLimit: 5 });
+  });
+
+  it('importAppState restores decks and prefs', () => {
+    const deck = createDeck('Import Test');
+    deck.cards.push(createFlashCard('Q1', 'A1'));
+    const state = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      decks: [deck],
+      reviewPrefs: { [deck.id]: { reviewCount: 10, newCardLimit: 3 } },
+    };
+
+    const result = importAppState(JSON.stringify(state));
+    expect(result.success).toBe(true);
+    expect(result.deckCount).toBe(1);
+
+    const loaded = loadDecks();
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].name).toBe('Import Test');
+    expect(loaded[0].cards[0].fsrs.due).toBeInstanceOf(Date);
+
+    expect(loadReviewPrefs(deck.id)).toEqual({ reviewCount: 10, newCardLimit: 3 });
+  });
+
+  it('importAppState rejects invalid JSON', () => {
+    const result = importAppState('not json');
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Invalid JSON');
+  });
+
+  it('importAppState rejects wrong version', () => {
+    const result = importAppState(JSON.stringify({ version: 99, decks: [] }));
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('version');
+  });
+
+  it('importAppState rejects missing decks', () => {
+    const result = importAppState(JSON.stringify({ version: 1 }));
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('deck data');
+  });
+
+  it('importAppState rejects invalid deck structure', () => {
+    const result = importAppState(JSON.stringify({ version: 1, decks: [{ id: 123 }] }));
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Invalid deck');
+  });
+
+  it('exportAppState and importAppState round-trip', () => {
+    const deck = createDeck('Round Trip');
+    deck.cards.push(createFlashCard('Q', 'A'));
+    saveDecks([deck]);
+    saveReviewPrefs(deck.id, { reviewCount: 20, newCardLimit: 8 });
+
+    const json = exportAppState();
+
+    // Clear storage
+    for (const key in storage) delete storage[key];
+    expect(loadDecks()).toEqual([]);
+
+    const result = importAppState(json);
+    expect(result.success).toBe(true);
+
+    const loaded = loadDecks();
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0].name).toBe('Round Trip');
+    expect(loaded[0].cards[0].front).toBe('Q');
+    expect(loadReviewPrefs(deck.id)).toEqual({ reviewCount: 20, newCardLimit: 8 });
   });
 });

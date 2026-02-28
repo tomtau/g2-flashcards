@@ -8,6 +8,8 @@ import {
   getDueCardCounts,
   loadReviewPrefs,
   saveReviewPrefs,
+  exportAppState,
+  importAppState,
 } from './storage';
 import { reviewCard, Rating, getNextReviewLabel, formatDueDate, type Grade } from './scheduler';
 import { parseAnkiTxt, type AnkiParseResult } from './anki-import';
@@ -37,6 +39,11 @@ function renderDeckList() {
     <div class="btn-row">
       <button class="primary" id="add-deck-btn">+ New Deck</button>
       <button id="import-btn">Import Anki TXT</button>
+    </div>
+    <div class="btn-row">
+      <button id="backup-btn">⬇ Backup</button>
+      <button id="restore-btn">⬆ Restore</button>
+      <input type="file" id="restore-file-input" accept=".json" class="hidden" />
     </div>
     <div id="deck-form" class="hidden">
       <div class="form-group">
@@ -74,6 +81,45 @@ function renderDeckList() {
 
   document.getElementById('import-btn')!.onclick = () => {
     renderImportPage();
+  };
+
+  document.getElementById('backup-btn')!.onclick = () => {
+    const json = exportAppState();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `g2-flashcards-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const restoreFileInput = document.getElementById('restore-file-input') as HTMLInputElement;
+  document.getElementById('restore-btn')!.onclick = () => {
+    if (!confirm(
+      'Restore will replace ALL your current decks and review settings with the data from a backup file.\n\n'
+      + 'This is useful for migrating your flashcard data between devices.\n\n'
+      + 'Your current data will be overwritten. Continue?'
+    )) return;
+    restoreFileInput.click();
+  };
+
+  restoreFileInput.onchange = () => {
+    const file = restoreFileInput.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = importAppState(reader.result as string);
+      if (result.success) {
+        decks = loadDecks();
+        renderDeckList();
+        alert(`Restored ${result.deckCount} deck(s) from backup.`);
+      } else {
+        alert(`Restore failed: ${result.error}`);
+      }
+    };
+    reader.readAsText(file);
+    restoreFileInput.value = '';
   };
 
   renderDeckItems();
